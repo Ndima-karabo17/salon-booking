@@ -38,8 +38,12 @@ export default function Dashboard() {
       <p className="mb-4">You are logged in as: <b>{profile.role}</b></p>
       {profile.role === "owner" && <p>Owner view: coming next.</p>}
       {profile.role === "stylist" && <p>Stylist view: coming next.</p>}
-      {profile.role === "client" && <p>Client view: coming next.</p>}
-      <button className="mt-6 underline" onClick={signOut}>Log out</button>
+      {profile.role === "client" && (
+  <a href="/book" className="inline-block rounded bg-black px-4 py-2 text-white">
+    Book an appointment
+  </a>
+)}
+       <button className="mt-6 underline" onClick={signOut}>Log out</button>
     </main>
   );
 }
