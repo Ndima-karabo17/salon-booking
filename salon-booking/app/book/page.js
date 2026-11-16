@@ -5,6 +5,7 @@ import { getSupabase } from "../../src/lib/supabase";
 
 const SLOT_HOURS = [8, 10, 12, 14, 16]; // placeholder slots
 const OFFSET = "+02:00"; // South Africa time
+const TZ = "Africa/Johannesburg";
 
 function slotIso(date, hour) {
   return `${date}T${String(hour).padStart(2, "0")}:00:00${OFFSET}`;
@@ -13,12 +14,12 @@ function slotIso(date, hour) {
 export default function BookPage() {
   const router = useRouter();
   const supabase = getSupabase();
-  const today = new Date().toISOString().slice(0, 10);
 
+  const [today, setToday] = useState("");
   const [user, setUser] = useState(null);
   const [services, setServices] = useState([]);
   const [serviceId, setServiceId] = useState("");
-  const [date, setDate] = useState(today);
+  const [date, setDate] = useState("");
   const [taken, setTaken] = useState([]);
   const [hour, setHour] = useState(null);
   const [message, setMessage] = useState("");
@@ -39,6 +40,9 @@ export default function BookPage() {
     async function init() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push("/login"); return; }
+      const t = new Date().toLocaleDateString("en-CA", { timeZone: TZ });
+      setToday(t);
+      setDate(t);
       setUser(user);
       const { data } = await supabase
         .from("services").select("*").eq("active", true).order("id");
@@ -94,7 +98,7 @@ export default function BookPage() {
     loadMyBookings();
   }
 
-  if (!user) return <p className="p-6">Loading...</p>;
+  if (!user || !today) return <p className="p-6">Loading...</p>;
 
   return (
     <main className="mx-auto max-w-xl p-6">
@@ -117,7 +121,9 @@ export default function BookPage() {
       <label className="block font-semibold">2. Choose a date</label>
       <input
         className="mb-4 w-full rounded border p-2"
-        type="date" min={today} value={date}
+        type="date"
+        min={today}
+        value={date}
         onChange={(e) => setDate(e.target.value)}
       />
 
@@ -127,7 +133,9 @@ export default function BookPage() {
           const off = isUnavailable(h);
           return (
             <button
-              key={h} disabled={off} onClick={() => setHour(h)}
+              key={h}
+              disabled={off}
+              onClick={() => setHour(h)}
               className={`rounded border px-4 py-2 ${
                 hour === h ? "bg-black text-white" : ""
               } ${off ? "cursor-not-allowed text-gray-400 line-through" : ""}`}
@@ -177,7 +185,9 @@ export default function BookPage() {
             <b>{b.services?.name}</b>
             <br />
             {new Date(b.starts_at).toLocaleString("en-ZA", {
-              dateStyle: "medium", timeStyle: "short", timeZone: "Africa/Johannesburg",
+              dateStyle: "medium",
+              timeStyle: "short",
+              timeZone: TZ,
             })}
             <br />
             Status: {b.status} · Deposit: {b.deposit_status} · Ref: SALON-{b.id}
