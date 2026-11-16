@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getSupabase } from "@/lib/supabase";
+import { getSupabase } from "../../src/lib/supabase";
 
 const SLOT_HOURS = [8, 10, 12, 14, 16]; // placeholder slots
 const OFFSET = "+02:00"; // South Africa time

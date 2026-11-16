@@ -36,8 +36,11 @@ export default function Dashboard() {
     <main className="mx-auto max-w-xl p-6">
       <h1 className="text-2xl font-bold">Hello, {profile.full_name}</h1>
       <p className="mb-4">You are logged in as: <b>{profile.role}</b></p>
-      {profile.role === "owner" && <p>Owner view: coming next.</p>}
-      {profile.role === "stylist" && <p>Stylist view: coming next.</p>}
+      {(profile.role === "owner" || profile.role === "stylist") && (
+  <a href="/staff" className="inline-block rounded bg-black px-4 py-2 text-white">
+    View bookings
+  </a>
+)}
       {profile.role === "client" && (
   <a href="/book" className="inline-block rounded bg-black px-4 py-2 text-white">
     Book an appointment
