@@ -18,7 +18,7 @@ export default function StaffPage() {
   const [tab, setTab] = useState("today");
   const [error, setError] = useState("");
 
-  const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: TZ });
+  const todayStr = new Date.toLocaleDateString("en-CA", { timeZone: TZ });
 
   async function load() {
     const { data, error } = await supabase
