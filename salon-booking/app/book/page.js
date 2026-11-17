@@ -5,7 +5,7 @@ import { getSupabase } from "../../src/lib/supabase";
 
 const SLOT_HOURS = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]; // salon open 07:00-19:00
 const CLOSE_HOUR = 19;
-const CAPACITY = 2; // placeholder: must match the database trigger
+const CAPACITY = 2; // must match the database trigger
 const OFFSET = "+02:00"; // South Africa time
 const TZ = "Africa/Johannesburg";
 
@@ -28,6 +28,7 @@ export default function BookPage() {
   const [serviceId, setServiceId] = useState("");
   const [date, setDate] = useState("");
   const [busy, setBusy] = useState([]);
+  const [reload, setReload] = useState(0);
   const [hour, setHour] = useState(null);
   const [message, setMessage] = useState("");
   const [confirmation, setConfirmation] = useState(null);
@@ -41,19 +42,6 @@ export default function BookPage() {
       .select("id, starts_at, status, deposit_status, services(name, deposit_rand)")
       .order("starts_at", { ascending: true });
     setMyBookings(data || []);
-  }
-
-  async function loadBusy(d) {
-    const { data } = await supabase.rpc("busy_times", {
-      day_start: `${d}T00:00:00${OFFSET}`,
-      day_end: `${d}T23:59:59${OFFSET}`,
-    });
-    setBusy(
-      (data || []).map((r) => ({
-        start: new Date(r.starts_at).getTime(),
-        end: new Date(r.ends_at).getTime(),
-      }))
-    );
   }
 
   useEffect(() => {
@@ -74,11 +62,24 @@ export default function BookPage() {
   }, []);
 
   useEffect(() => {
-    if (date) {
-      loadBusy(date);
-      setHour(null);
+    if (!date) return;
+    let cancelled = false;
+    async function fetchBusy() {
+      const { data } = await supabase.rpc("busy_times", {
+        day_start: `${date}T00:00:00${OFFSET}`,
+        day_end: `${date}T23:59:59${OFFSET}`,
+      });
+      if (cancelled) return;
+      setBusy(
+        (data || []).map((r) => ({
+          start: new Date(r.starts_at).getTime(),
+          end: new Date(r.ends_at).getTime(),
+        }))
+      );
     }
-  }, [date]);
+    fetchBusy();
+    return () => { cancelled = true; };
+  }, [date, reload]);
 
   function isUnavailable(h) {
     if (!service) return true;
@@ -111,12 +112,12 @@ export default function BookPage() {
           ? "Sorry, that time was just taken. Please pick another."
           : error.message
       );
-      loadBusy(date);
+      setReload((r) => r + 1);
       return;
     }
     setConfirmation({ id: data.id, service, date, hour });
     setHour(null);
-    loadBusy(date);
+    setReload((r) => r + 1);
     loadMyBookings();
   }
 
@@ -146,7 +147,7 @@ export default function BookPage() {
         type="date"
         min={today}
         value={date}
-        onChange={(e) => setDate(e.target.value)}
+        onChange={(e) => { setDate(e.target.value); setHour(null); }}
       />
 
       <label className="block font-semibold">3. Choose a start time</label>
@@ -207,7 +208,9 @@ export default function BookPage() {
             </p>
           )}
           <p className="mt-2 text-sm text-gray-600">
-            Salon location: [placeholder address]. Banking details: [placeholder].
+            Salon: Sbongile&apos;s Hair Salon, Zone 1, Jujuvalley, Seshego,
+            Polokwane. Banking details: ask the salon (to be added with the
+            owner&apos;s permission).
           </p>
         </div>
       )}
