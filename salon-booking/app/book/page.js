@@ -3,12 +3,19 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "../../src/lib/supabase";
 
-const SLOT_HOURS = [8, 10, 12, 14, 16]; // placeholder slots
+const SLOT_HOURS = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]; // salon open 07:00-19:00
+const CLOSE_HOUR = 19;
+const CAPACITY = 2; // placeholder: must match the database trigger
 const OFFSET = "+02:00"; // South Africa time
 const TZ = "Africa/Johannesburg";
 
 function slotIso(date, hour) {
   return `${date}T${String(hour).padStart(2, "0")}:00:00${OFFSET}`;
+}
+function fmtDur(min) {
+  if (min < 60) return `${min} min`;
+  const h = min / 60;
+  return Number.isInteger(h) ? `${h}h` : `${h.toFixed(1)}h`;
 }
 
 export default function BookPage() {
@@ -20,7 +27,7 @@ export default function BookPage() {
   const [services, setServices] = useState([]);
   const [serviceId, setServiceId] = useState("");
   const [date, setDate] = useState("");
-  const [taken, setTaken] = useState([]);
+  const [busy, setBusy] = useState([]);
   const [hour, setHour] = useState(null);
   const [message, setMessage] = useState("");
   const [confirmation, setConfirmation] = useState(null);
@@ -34,6 +41,19 @@ export default function BookPage() {
       .select("id, starts_at, status, deposit_status, services(name, deposit_rand)")
       .order("starts_at", { ascending: true });
     setMyBookings(data || []);
+  }
+
+  async function loadBusy(d) {
+    const { data } = await supabase.rpc("busy_times", {
+      day_start: `${d}T00:00:00${OFFSET}`,
+      day_end: `${d}T23:59:59${OFFSET}`,
+    });
+    setBusy(
+      (data || []).map((r) => ({
+        start: new Date(r.starts_at).getTime(),
+        end: new Date(r.ends_at).getTime(),
+      }))
+    );
   }
 
   useEffect(() => {
@@ -54,20 +74,20 @@ export default function BookPage() {
   }, []);
 
   useEffect(() => {
-    async function loadTaken() {
-      const { data } = await supabase.rpc("taken_slots", {
-        day_start: `${date}T00:00:00${OFFSET}`,
-        day_end: `${date}T23:59:59${OFFSET}`,
-      });
-      setTaken((data || []).map((t) => new Date(t).getTime()));
+    if (date) {
+      loadBusy(date);
       setHour(null);
     }
-    if (date) loadTaken();
   }, [date]);
 
   function isUnavailable(h) {
-    const t = new Date(slotIso(date, h)).getTime();
-    return t < Date.now || taken.includes(t);
+    if (!service) return true;
+    const start = new Date(slotIso(date, h)).getTime();
+    const end = start + service.duration_minutes * 60000;
+    const closing = new Date(slotIso(date, CLOSE_HOUR)).getTime();
+    if (start < Date.now || end > closing) return true;
+    const overlapping = busy.filter((b) => b.start < end && b.end > start).length;
+    return overlapping >= CAPACITY;
   }
 
   async function book() {
@@ -87,14 +107,16 @@ export default function BookPage() {
       .single();
     if (error) {
       setMessage(
-        error.code === "23505"
+        error.message.includes("slot_full")
           ? "Sorry, that time was just taken. Please pick another."
           : error.message
       );
+      loadBusy(date);
       return;
     }
     setConfirmation({ id: data.id, service, date, hour });
     setHour(null);
+    loadBusy(date);
     loadMyBookings();
   }
 
@@ -109,11 +131,11 @@ export default function BookPage() {
       <select
         className="mb-4 w-full rounded border p-2"
         value={serviceId}
-        onChange={(e) => setServiceId(e.target.value)}
+        onChange={(e) => { setServiceId(e.target.value); setHour(null); }}
       >
         {services.map((s) => (
           <option key={s.id} value={s.id}>
-            {s.name} · R{s.price_rand} · about {Math.round(s.duration_minutes / 60)}h
+            {s.name} · R{s.price_rand} · {fmtDur(s.duration_minutes)}
           </option>
         ))}
       </select>
@@ -127,7 +149,7 @@ export default function BookPage() {
         onChange={(e) => setDate(e.target.value)}
       />
 
-      <label className="block font-semibold">3. Choose a time</label>
+      <label className="block font-semibold">3. Choose a start time</label>
       <div className="mb-4 flex flex-wrap gap-2">
         {SLOT_HOURS.map((h) => {
           const off = isUnavailable(h);
@@ -148,8 +170,14 @@ export default function BookPage() {
 
       {service && (
         <p className="mb-4 rounded bg-gray-100 p-3">
-          Deposit to secure your slot: <b>R{service.deposit_rand}</b> (the rest
-          is paid at the salon)
+          {service.deposit_rand > 0 ? (
+            <>
+              Deposit to secure your slot: <b>R{service.deposit_rand}</b> (the
+              rest is paid at the salon)
+            </>
+          ) : (
+            <>No deposit needed for this service. Pay at the salon.</>
+          )}
         </p>
       )}
 
@@ -165,12 +193,19 @@ export default function BookPage() {
             {confirmation.service.name} on {confirmation.date} at{" "}
             {String(confirmation.hour).padStart(2, "0")}:00
           </p>
-          <p className="mt-2">
-            Please pay the <b>R{confirmation.service.deposit_rand}</b> deposit by
-            transfer or cash and use the reference{" "}
-            <b>SALON-{confirmation.id}</b>. Your slot is held once the salon marks
-            the deposit as paid.
-          </p>
+          {confirmation.service.deposit_rand > 0 ? (
+            <p className="mt-2">
+              Please pay the <b>R{confirmation.service.deposit_rand}</b> deposit
+              by transfer or cash and use the reference{" "}
+              <b>SALON-{confirmation.id}</b>. Your slot is held once the salon
+              marks the deposit as paid.
+            </p>
+          ) : (
+            <p className="mt-2">
+              Your reference is <b>SALON-{confirmation.id}</b>. No deposit is
+              needed.
+            </p>
+          )}
           <p className="mt-2 text-sm text-gray-600">
             Salon location: [placeholder address]. Banking details: [placeholder].
           </p>
