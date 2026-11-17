@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { getSupabase } from "../../src/lib/supabase";
 
 const TZ = "Africa/Johannesburg";
+const OFFSET = "+02:00";
+const HOURS = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
 const dayOf = (iso) => new Date(iso).toLocaleDateString("en-CA", { timeZone: TZ });
 const timeOf = (iso) =>
   new Date(iso).toLocaleTimeString("en-ZA", { timeZone: TZ, hour: "2-digit", minute: "2-digit" });
@@ -14,16 +16,19 @@ export default function StaffPage() {
   const router = useRouter();
   const supabase = getSupabase();
   const [role, setRole] = useState(null);
+  const [todayStr, setTodayStr] = useState("");
   const [bookings, setBookings] = useState([]);
   const [tab, setTab] = useState("today");
   const [error, setError] = useState("");
+  const [reschedId, setReschedId] = useState(null);
+  const [newDate, setNewDate] = useState("");
+  const [newHour, setNewHour] = useState("");
 
- const [todayStr, setTodayStr] = useState("");
   async function load() {
     const { data, error } = await supabase
       .from("bookings")
       .select(
-        "id, starts_at, status, deposit_status, client:profiles!client_id(full_name), services(name, price_rand, deposit_rand)"
+        "id, starts_at, status, deposit_status, rescheduled_from, client:profiles!client_id(full_name), services(name, price_rand, deposit_rand)"
       )
       .order("starts_at", { ascending: true });
     if (error) setError(error.message);
@@ -37,6 +42,7 @@ export default function StaffPage() {
       const { data: p } = await supabase
         .from("profiles").select("role").eq("id", user.id).single();
       if (!p || p.role === "client") { router.push("/dashboard"); return; }
+      setTodayStr(new Date().toLocaleDateString("en-CA", { timeZone: TZ }));
       setRole(p.role);
       load();
     }
@@ -46,11 +52,40 @@ export default function StaffPage() {
   async function update(id, changes) {
     setError("");
     const { error } = await supabase.from("bookings").update(changes).eq("id", id);
-    if (error) setError(error.message);
+    if (error) {
+      setError(
+        error.message.includes("slot_full")
+          ? "That time is already full. Please pick another time."
+          : error.message
+      );
+      return false;
+    }
     load();
+    return true;
   }
 
-  if (!role) return <p className="p-6">Loading...</p>;
+  function startResched(b) {
+    setError("");
+    setReschedId(b.id);
+    setNewDate(dayOf(b.starts_at));
+    setNewHour("");
+  }
+
+  async function saveResched(b) {
+    if (!newDate || newHour === "") {
+      setError("Please choose a new date and time.");
+      return;
+    }
+    const iso = `${newDate}T${String(newHour).padStart(2, "0")}:00:00${OFFSET}`;
+    if (new Date(iso).getTime() < Date.now()) {
+      setError("That time has already passed.");
+      return;
+    }
+    const ok = await update(b.id, { starts_at: iso, rescheduled_from: b.starts_at });
+    if (ok) setReschedId(null);
+  }
+
+  if (!role || !todayStr) return <p className="p-6">Loading...</p>;
 
   const shown = bookings.filter((b) => {
     const d = dayOf(b.starts_at);
@@ -65,10 +100,7 @@ export default function StaffPage() {
   ).length;
 
   const Btn = ({ children, onClick, tone = "" }) => (
-    <button
-      onClick={onClick}
-      className={`rounded border px-3 py-1 text-sm ${tone}`}
-    >
+    <button onClick={onClick} className={`rounded border px-3 py-1 text-sm ${tone}`}>
       {children}
     </button>
   );
@@ -112,6 +144,11 @@ export default function StaffPage() {
                 {b.deposit_status}
               </b>
             </p>
+            {b.rescheduled_from && (
+              <p className="text-sm text-gray-600">
+                Moved from {dateOf(b.rescheduled_from)} {timeOf(b.rescheduled_from)}
+              </p>
+            )}
 
             {(b.status === "booked" || b.status === "arrived") && (
               <div className="mt-2 flex flex-wrap gap-2">
@@ -128,10 +165,40 @@ export default function StaffPage() {
                 )}
                 {b.status === "booked" && (
                   <>
+                    <Btn tone="bg-yellow-100" onClick={() => startResched(b)}>Reschedule</Btn>
                     <Btn onClick={() => update(b.id, { status: "no_show" })}>No-show</Btn>
                     <Btn onClick={() => update(b.id, { status: "cancelled" })}>Cancel</Btn>
                   </>
                 )}
+              </div>
+            )}
+
+            {reschedId === b.id && (
+              <div className="mt-3 rounded bg-gray-50 p-3">
+                <p className="mb-2 text-sm font-semibold">Move this booking to:</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="date"
+                    min={todayStr}
+                    value={newDate}
+                    onChange={(e) => setNewDate(e.target.value)}
+                    className="rounded border p-2"
+                  />
+                  <select
+                    value={newHour}
+                    onChange={(e) => setNewHour(e.target.value)}
+                    className="rounded border p-2"
+                  >
+                    <option value="">Time</option>
+                    {HOURS.map((h) => (
+                      <option key={h} value={h}>
+                        {String(h).padStart(2, "0")}:00
+                      </option>
+                    ))}
+                  </select>
+                  <Btn tone="bg-green-100" onClick={() => saveResched(b)}>Save</Btn>
+                  <Btn onClick={() => setReschedId(null)}>Cancel</Btn>
+                </div>
               </div>
             )}
           </li>
