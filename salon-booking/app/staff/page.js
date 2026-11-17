@@ -23,12 +23,15 @@ export default function StaffPage() {
   const [reschedId, setReschedId] = useState(null);
   const [newDate, setNewDate] = useState("");
   const [newHour, setNewHour] = useState("");
+  const [payId, setPayId] = useState(null);
+  const [payMethod, setPayMethod] = useState("transfer");
+  const [payRef, setPayRef] = useState("");
 
   async function load() {
     const { data, error } = await supabase
       .from("bookings")
       .select(
-        "id, starts_at, status, deposit_status, rescheduled_from, client:profiles!client_id(full_name), services(name, price_rand, deposit_rand)"
+        "id, starts_at, status, deposit_status, deposit_method, deposit_reference, deposit_confirmed_at, rescheduled_from, client:profiles!client_id(full_name), services(name, price_rand, deposit_rand)"
       )
       .order("starts_at", { ascending: true });
     if (error) setError(error.message);
@@ -56,6 +59,8 @@ export default function StaffPage() {
       setError(
         error.message.includes("slot_full")
           ? "That time is already full. Please pick another time."
+          : error.message.includes("owner_only")
+          ? "Only the owner can change deposits."
           : error.message
       );
       return false;
@@ -66,6 +71,7 @@ export default function StaffPage() {
 
   function startResched(b) {
     setError("");
+    setPayId(null);
     setReschedId(b.id);
     setNewDate(dayOf(b.starts_at));
     setNewHour("");
@@ -85,9 +91,34 @@ export default function StaffPage() {
     if (ok) setReschedId(null);
   }
 
+  function startPay(b) {
+    setError("");
+    setReschedId(null);
+    setPayId(b.id);
+    setPayMethod("transfer");
+    setPayRef("");
+  }
+
+  async function savePay(b) {
+    const ok = await update(b.id, {
+      deposit_status: "paid",
+      deposit_method: payMethod,
+      deposit_reference: payRef.trim() || null,
+      deposit_confirmed_at: new Date().toISOString(),
+    });
+    if (ok) setPayId(null);
+  }
+
   if (!role || !todayStr) return <p className="p-6">Loading...</p>;
 
   const shown = bookings.filter((b) => {
+    if (tab === "unpaid") {
+      return (
+        b.status === "booked" &&
+        b.deposit_status === "pending" &&
+        b.services?.deposit_rand > 0
+      );
+    }
     const d = dayOf(b.starts_at);
     if (tab === "today") return d === todayStr;
     if (tab === "upcoming") return d > todayStr;
@@ -96,7 +127,10 @@ export default function StaffPage() {
 
   const noShows = bookings.filter((b) => b.status === "no_show").length;
   const pendingDeposits = bookings.filter(
-    (b) => b.status === "booked" && b.deposit_status === "pending"
+    (b) =>
+      b.status === "booked" &&
+      b.deposit_status === "pending" &&
+      b.services?.deposit_rand > 0
   ).length;
 
   const Btn = ({ children, onClick, tone = "" }) => (
@@ -115,8 +149,8 @@ export default function StaffPage() {
         Deposits waiting: <b>{pendingDeposits}</b> · No-shows recorded: <b>{noShows}</b>
       </p>
 
-      <div className="mb-4 flex gap-2">
-        {[["today", "Today"], ["upcoming", "Upcoming"], ["past", "Past"]].map(([k, label]) => (
+      <div className="mb-4 flex flex-wrap gap-2">
+        {[["today", "Today"], ["upcoming", "Upcoming"], ["unpaid", "Unpaid deposits"], ["past", "Past"]].map(([k, label]) => (
           <button
             key={k}
             onClick={() => setTab(k)}
@@ -139,11 +173,25 @@ export default function StaffPage() {
             </div>
             <p>{b.client?.full_name || "Client"} · {b.services?.name}</p>
             <p className="text-sm">
-              Status: <b>{b.status}</b> · Deposit R{b.services?.deposit_rand}:{" "}
-              <b className={b.deposit_status === "paid" ? "text-green-700" : "text-orange-600"}>
-                {b.deposit_status}
-              </b>
+              Status: <b>{b.status}</b> ·{" "}
+              {b.services?.deposit_rand > 0 ? (
+                <>
+                  Deposit R{b.services.deposit_rand}:{" "}
+                  <b className={b.deposit_status === "paid" ? "text-green-700" : "text-orange-600"}>
+                    {b.deposit_status}
+                  </b>
+                </>
+              ) : (
+                <>No deposit needed</>
+              )}
             </p>
+            {b.deposit_status === "paid" && b.deposit_confirmed_at && (
+              <p className="text-sm text-green-700">
+                Deposit confirmed ({b.deposit_method}
+                {b.deposit_reference ? `, ref ${b.deposit_reference}` : ""}) on{" "}
+                {dateOf(b.deposit_confirmed_at)} {timeOf(b.deposit_confirmed_at)}
+              </p>
+            )}
             {b.rescheduled_from && (
               <p className="text-sm text-gray-600">
                 Moved from {dateOf(b.rescheduled_from)} {timeOf(b.rescheduled_from)}
@@ -152,9 +200,21 @@ export default function StaffPage() {
 
             {(b.status === "booked" || b.status === "arrived") && (
               <div className="mt-2 flex flex-wrap gap-2">
-                {role === "owner" && b.deposit_status === "pending" && (
-                  <Btn tone="bg-green-100" onClick={() => update(b.id, { deposit_status: "paid" })}>
-                    Mark deposit paid
+                {role === "owner" && b.deposit_status === "pending" && b.services?.deposit_rand > 0 && (
+                  <Btn tone="bg-green-100" onClick={() => startPay(b)}>Confirm deposit paid</Btn>
+                )}
+                {role === "owner" && b.deposit_status === "paid" && (
+                  <Btn
+                    onClick={() =>
+                      update(b.id, {
+                        deposit_status: "pending",
+                        deposit_method: null,
+                        deposit_reference: null,
+                        deposit_confirmed_at: null,
+                      })
+                    }
+                  >
+                    Undo deposit
                   </Btn>
                 )}
                 {b.status === "booked" && (
@@ -198,6 +258,32 @@ export default function StaffPage() {
                   </select>
                   <Btn tone="bg-green-100" onClick={() => saveResched(b)}>Save</Btn>
                   <Btn onClick={() => setReschedId(null)}>Cancel</Btn>
+                </div>
+              </div>
+            )}
+
+            {payId === b.id && (
+              <div className="mt-3 rounded bg-gray-50 p-3">
+                <p className="mb-2 text-sm font-semibold">
+                  Confirm deposit of R{b.services?.deposit_rand}:
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={payMethod}
+                    onChange={(e) => setPayMethod(e.target.value)}
+                    className="rounded border p-2"
+                  >
+                    <option value="transfer">Transfer</option>
+                    <option value="cash">Cash</option>
+                  </select>
+                  <input
+                    value={payRef}
+                    onChange={(e) => setPayRef(e.target.value)}
+                    placeholder="Reference (optional)"
+                    className="rounded border p-2"
+                  />
+                  <Btn tone="bg-green-100" onClick={() => savePay(b)}>Save</Btn>
+                  <Btn onClick={() => setPayId(null)}>Cancel</Btn>
                 </div>
               </div>
             )}
