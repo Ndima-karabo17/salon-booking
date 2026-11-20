@@ -3,7 +3,7 @@
 A booking and deposit tool for a braiding salon in Seshego, Polokwane.
 Built for the Samsung Innovation Internship 2027 entry assignment (Route A).
 
-**Live link:** [paste your Vercel link here]
+**Live link:** https://salon-booking-uf5f.vercel.app/
 
 ## The problem
 The salon runs on a paper notebook. Stylists stop braiding to check who is
