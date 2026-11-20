@@ -1,26 +1,80 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --color-espresso: #2b1a12;
+  --color-cocoa: #4a2f22;
+  --color-cream: #fbf5ec;
+  --color-sand: #efe3d0;
+  --color-gold: #c8963e;
+  --color-gold-dark: #a87a28;
+  --color-clay: #b5523b;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-display: var(--font-playfair);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: #fbf5ec;
+  color: #2b1a12;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  text-align: center;
+  transition: background 0.2s, color 0.2s;
+  cursor: pointer;
+}
+.btn-gold { background: #c8963e; color: #2b1a12; }
+.btn-gold:hover { background: #a87a28; color: #fff; }
+.btn-dark { background: #2b1a12; color: #fbf5ec; }
+.btn-dark:hover { background: #4a2f22; }
+.btn-outline { border: 1.5px solid #2b1a12; color: #2b1a12; }
+.btn-outline:hover { background: #2b1a12; color: #fbf5ec; }
+.btn-outline-light { border: 1.5px solid #fbf5ec; color: #fbf5ec; }
+.btn-outline-light:hover { background: #fbf5ec; color: #2b1a12; }
+
+/* Cards and form fields */
+.card {
+  background: #ffffff;
+  border: 1px solid #e6d8c3;
+  border-radius: 1rem;
+  padding: 1rem;
+}
+.field {
+  width: 100%;
+  border: 1.5px solid #d9c7ab;
+  background: #ffffff;
+  border-radius: 0.75rem;
+  padding: 0.7rem 0.9rem;
+}
+.field:focus {
+  outline: 2px solid #c8963e;
+  border-color: #c8963e;
+}
+
+/* Time slots */
+.slot {
+  border: 1.5px solid #d9c7ab;
+  background: #ffffff;
+  border-radius: 9999px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+}
+.slot:hover:not(:disabled) { border-color: #c8963e; }
+.slot-on { background: #2b1a12; color: #fbf5ec; border-color: #2b1a12; }
+.slot:disabled {
+  color: #b9a98f;
+  text-decoration: line-through;
+  cursor: not-allowed;
+  background: #f4ecdf;
 }

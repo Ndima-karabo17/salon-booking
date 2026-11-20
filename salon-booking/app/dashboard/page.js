@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "../../src/lib/supabase";
+import Header from "../../src/components/Header";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -33,20 +34,30 @@ export default function Dashboard() {
   if (!profile) return <p className="p-6">Loading...</p>;
 
   return (
-    <main className="mx-auto max-w-xl p-6">
-      <h1 className="text-2xl font-bold">Hello, {profile.full_name}</h1>
-      <p className="mb-4">You are logged in as: <b>{profile.role}</b></p>
-      {(profile.role === "owner" || profile.role === "stylist") && (
-  <a href="/staff" className="inline-block rounded bg-black px-4 py-2 text-white">
-    View bookings
-  </a>
-)}
-      {profile.role === "client" && (
-  <a href="/book" className="inline-block rounded bg-black px-4 py-2 text-white">
-    Book an appointment
-  </a>
-)}
-       <button className="mt-6 underline" onClick={signOut}>Log out</button>
-    </main>
+    <>
+      <Header />
+      <main className="mx-auto max-w-xl p-6">
+        <h1 className="font-display mt-4 text-3xl font-bold">
+          Hello, {profile.full_name}
+        </h1>
+        <p className="mb-6 mt-1 text-cocoa">
+          Logged in as <b className="text-gold-dark">{profile.role}</b>
+        </p>
+
+        <div className="card flex flex-col gap-3">
+          {(profile.role === "owner" || profile.role === "stylist") && (
+            <a href="/staff" className="btn btn-gold">View bookings</a>
+          )}
+          {profile.role === "client" && (
+            <a href="/book" className="btn btn-gold">Book an appointment</a>
+          )}
+          <a href="/home" className="btn btn-outline">Back to home page</a>
+        </div>
+
+        <button className="mt-6 text-sm text-cocoa underline" onClick={signOut}>
+          Log out
+        </button>
+      </main>
+    </>
   );
 }
