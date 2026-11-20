@@ -13,6 +13,14 @@ const timeOf = (iso) =>
 const dateOf = (iso) =>
   new Date(iso).toLocaleDateString("en-ZA", { timeZone: TZ, weekday: "short", day: "numeric", month: "short" });
 
+function Btn({ children, onClick, tone = "" }) {
+  return (
+    <button onClick={onClick} className={`rounded border px-3 py-1 text-sm ${tone}`}>
+      {children}
+    </button>
+  );
+}
+
 export default function StaffPage() {
   const router = useRouter();
   const supabase = getSupabase();
@@ -173,12 +181,6 @@ export default function StaffPage() {
       b.deposit_status === "pending" &&
       b.services?.deposit_rand > 0
   ).length;
-
-  const Btn = ({ children, onClick, tone = "" }) => (
-    <button onClick={onClick} className={`rounded border px-3 py-1 text-sm ${tone}`}>
-      {children}
-    </button>
-  );
 
   return (
     <main className="mx-auto max-w-2xl p-6">
