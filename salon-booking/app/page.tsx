@@ -1,3 +1,4 @@
+import Link from "next/link";
 import ServiceMenu from "../src/components/ServiceMenu";
 
 const SALON_NAME = "Sbongile's Hair Salon";
@@ -28,7 +29,7 @@ export default function Home() {
             knowing your slot is yours.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <a href="/book" className="btn btn-gold">Book an appointment</a>
+            <Link href="/book" className="btn btn-gold">Book an appointment</Link>
             <a href="#services" className="btn btn-outline-light">See styles and prices</a>
           </div>
           <p className="mt-6 text-sm text-sand">Open every day, 07:00 to 19:00</p>
@@ -39,7 +40,7 @@ export default function Home() {
         <h2 className="font-display text-3xl font-bold">Styles and prices</h2>
         <p className="mb-6 mt-1 text-cocoa">Prices and times as set by the salon.</p>
         <ServiceMenu />
-        <a href="/book" className="btn btn-dark mt-6 w-full">Book now</a>
+        <Link href="/book" className="btn btn-dark mt-6 w-full">Book now</Link>
       </section>
 
       <section className="bg-sand">
@@ -87,9 +88,9 @@ export default function Home() {
         Prototype built for the Samsung Innovation Internship assignment. All
         client data in this app is made up.
         <br />
-        <a href="/login" className="mt-2 inline-block text-gold underline">
+        <Link href="/login" className="mt-2 inline-block text-gold underline">
           Log in
-        </a>
+        </Link>
       </footer>
     </main>
   );

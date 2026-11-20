@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "../../src/lib/supabase";
@@ -141,7 +142,7 @@ export default function StaffPage() {
 
   return (
     <main className="mx-auto max-w-2xl p-6">
-      <a href="/dashboard" className="text-sm underline">← Back</a>
+      <Link href="/dashboard" className="text-sm underline">← Back</Link>
       <h1 className="mb-1 mt-2 text-2xl font-bold">
         {role === "owner" ? "Owner" : "Stylist"}: bookings
       </h1>

@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "../../src/lib/supabase";
@@ -46,12 +47,12 @@ export default function Dashboard() {
 
         <div className="card flex flex-col gap-3">
           {(profile.role === "owner" || profile.role === "stylist") && (
-            <a href="/staff" className="btn btn-gold">View bookings</a>
+            <Link href="/staff" className="btn btn-gold">View bookings</Link>
           )}
           {profile.role === "client" && (
-            <a href="/book" className="btn btn-gold">Book an appointment</a>
+            <Link href="/book" className="btn btn-gold">Book an appointment</Link>
           )}
-          <a href="/home" className="btn btn-outline">Back to home page</a>
+          <Link href="/" className="btn btn-outline">Back to home page</Link>
         </div>
 
         <button className="mt-6 text-sm text-cocoa underline" onClick={signOut}>
