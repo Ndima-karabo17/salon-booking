@@ -2,7 +2,7 @@ import Link from "next/link";
 import ServiceMenu from "../src/components/ServiceMenu";
 
 const SALON_NAME = "Sbongile's Hair Salon";
-const ADDRESS = "Zone 1, Jujuvalley, Seshego, Polokwane";
+const ADDRESS = "448 Bo-Okelo St, Seshego-A, Polokwane, 0742";
 const PHONE = ""; // add the salon's number only with the owner's permission
 
 const mapQuery = encodeURIComponent(ADDRESS + ", South Africa");
