@@ -3,7 +3,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "../../src/lib/supabase";
-import Header from "../../src/components/Header";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -36,7 +35,6 @@ export default function Dashboard() {
 
   return (
     <>
-      <Header />
       <main className="mx-auto max-w-xl p-6">
         <h1 className="font-display mt-4 text-3xl font-bold">
           Hello, {profile.full_name}

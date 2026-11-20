@@ -2,7 +2,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "../../src/lib/supabase";
-import Header from "../../src/components/Header";
 
 const SLOT_HOURS = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]; // salon open 07:00-19:00
 const CLOSE_HOUR = 19;
@@ -174,7 +173,6 @@ export default function BookPage() {
 
   return (
     <>
-      <Header />
       <main className="mx-auto max-w-xl p-6">
         <h1 className="font-display mb-1 mt-4 text-3xl font-bold">Book your chair</h1>
         <p className="mb-6 text-cocoa">Three quick steps, then pay your deposit to hold the slot.</p>

@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "../../src/lib/supabase";
-import Header from "../../src/components/Header";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -33,7 +32,6 @@ export default function LoginPage() {
 
   return (
     <>
-      <Header />
       <main className="mx-auto max-w-sm p-6">
         <h1 className="font-display mb-1 mt-4 text-3xl font-bold">
           {mode === "login" ? "Welcome back" : "Create your account"}
