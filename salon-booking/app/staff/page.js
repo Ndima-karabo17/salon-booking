@@ -27,12 +27,17 @@ export default function StaffPage() {
   const [payId, setPayId] = useState(null);
   const [payMethod, setPayMethod] = useState("transfer");
   const [payRef, setPayRef] = useState("");
+  const [services, setServices] = useState([]);
+  const [walkOpen, setWalkOpen] = useState(false);
+  const [walkService, setWalkService] = useState("");
+  const [walkTime, setWalkTime] = useState("");
+  const [walkLabel, setWalkLabel] = useState("");
 
   async function load() {
     const { data, error } = await supabase
       .from("bookings")
       .select(
-        "id, starts_at, status, deposit_status, deposit_method, deposit_reference, deposit_confirmed_at, rescheduled_from, client:profiles!client_id(full_name), services(name, price_rand, deposit_rand)"
+        "id, starts_at, status, deposit_status, deposit_method, deposit_reference, deposit_confirmed_at, rescheduled_from, walk_in_label, client:profiles!client_id(full_name), services(name, price_rand, deposit_rand)"
       )
       .order("starts_at", { ascending: true });
     if (error) setError(error.message);
@@ -48,6 +53,13 @@ export default function StaffPage() {
       if (!p || p.role === "client") { router.push("/dashboard"); return; }
       setTodayStr(new Date().toLocaleDateString("en-CA", { timeZone: TZ }));
       setRole(p.role);
+      const { data: svc } = await supabase
+        .from("services").select("id, name, duration_minutes").eq("active", true).order("id");
+      setServices(svc || []);
+      if (svc && svc.length) setWalkService(String(svc[0].id));
+      setWalkTime(
+        new Date().toLocaleTimeString("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit" })
+      );
       load();
     }
     init();
@@ -110,6 +122,34 @@ export default function StaffPage() {
     if (ok) setPayId(null);
   }
 
+  async function saveWalkIn() {
+    setError("");
+    if (!walkService || !walkTime) {
+      setError("Please choose a style and a start time for the walk-in.");
+      return;
+    }
+    const iso = `${todayStr}T${walkTime}:00${OFFSET}`;
+    const { error } = await supabase.from("bookings").insert({
+      client_id: null,
+      service_id: Number(walkService),
+      starts_at: iso,
+      status: "arrived",
+      walk_in_label: walkLabel.trim() || "Walk-in",
+    });
+    if (error) {
+      setError(
+        error.message.includes("slot_full")
+          ? "The salon is full at that time. Reschedule a booking first, or pick another time."
+          : error.message
+      );
+      return;
+    }
+    setWalkOpen(false);
+    setWalkLabel("");
+    setTab("today");
+    load();
+  }
+
   if (!role || !todayStr) return <p className="p-6">Loading...</p>;
 
   const shown = bookings.filter((b) => {
@@ -150,6 +190,44 @@ export default function StaffPage() {
         Deposits waiting: <b>{pendingDeposits}</b> · No-shows recorded: <b>{noShows}</b>
       </p>
 
+      <div className="mb-4">
+        <Btn tone="bg-green-100" onClick={() => { setError(""); setWalkOpen(!walkOpen); }}>
+          + Add walk-in
+        </Btn>
+        {walkOpen && (
+          <div className="mt-3 rounded bg-gray-50 p-3">
+            <p className="mb-2 text-sm font-semibold">
+              A walk-in is in the chair now. Do not enter real names.
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={walkService}
+                onChange={(e) => setWalkService(e.target.value)}
+                className="rounded border p-2"
+              >
+                {services.map((sv) => (
+                  <option key={sv.id} value={sv.id}>{sv.name}</option>
+                ))}
+              </select>
+              <input
+                type="time"
+                value={walkTime}
+                onChange={(e) => setWalkTime(e.target.value)}
+                className="rounded border p-2"
+              />
+              <input
+                value={walkLabel}
+                onChange={(e) => setWalkLabel(e.target.value)}
+                placeholder="Label (e.g. Walk-in 1)"
+                className="rounded border p-2"
+              />
+              <Btn tone="bg-green-100" onClick={saveWalkIn}>Save walk-in</Btn>
+              <Btn onClick={() => setWalkOpen(false)}>Cancel</Btn>
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="mb-4 flex flex-wrap gap-2">
         {[["today", "Today"], ["upcoming", "Upcoming"], ["unpaid", "Unpaid deposits"], ["past", "Past"]].map(([k, label]) => (
           <button
@@ -172,7 +250,7 @@ export default function StaffPage() {
               <b>{dateOf(b.starts_at)} · {timeOf(b.starts_at)}</b>
               <span className="text-sm">Ref SALON-{b.id}</span>
             </div>
-            <p>{b.client?.full_name || "Client"} · {b.services?.name}</p>
+            <p>{b.client ? (b.client.full_name || "Client") : (b.walk_in_label === "Walk-in" ? "Walk-in" : `${b.walk_in_label} (walk-in)`)} · {b.services?.name}</p>
             <p className="text-sm">
               Status: <b>{b.status}</b> ·{" "}
               {b.services?.deposit_rand > 0 ? (
