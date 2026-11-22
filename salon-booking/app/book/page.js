@@ -48,6 +48,7 @@ export default function BookPage() {
   const [hour, setHour] = useState(null);
   const [message, setMessage] = useState("");
   const [confirmation, setConfirmation] = useState(null);
+  const [agreed, setAgreed] = useState(false);
   const [myBookings, setMyBookings] = useState([]);
 
   const service = services.find((s) => String(s.id) === String(serviceId));
@@ -134,6 +135,10 @@ export default function BookPage() {
       setMessage("Please choose a style and a time.");
       return;
     }
+    if (service.deposit_rand > 0 && !agreed) {
+      setMessage("Please tick the box to confirm you understand the deposit is non-refundable.");
+      return;
+    }
     if (new Date(slotIso(date, hour)).getTime() <= Date.now) {
       setMessage("That time has already passed. Please pick a later time.");
       setHour(null);
@@ -146,6 +151,7 @@ export default function BookPage() {
         client_id: user.id,
         service_id: service.id,
         starts_at: slotIso(date, hour),
+        terms_accepted_at: service.deposit_rand > 0 ? new Date().toISOString() : null,
       })
       .select()
       .single();
@@ -155,6 +161,8 @@ export default function BookPage() {
           ? "Sorry, that time was just taken. Please pick another."
           : error.message.includes("slot_past")
           ? "That time has already passed. Please pick a later time."
+          : error.message.includes("slot_closed")
+          ? "This style would run past closing time (19:00). Please pick an earlier start."
           : error.message
       );
       setReload((r) => r + 1);
@@ -162,6 +170,7 @@ export default function BookPage() {
     }
     setConfirmation({ id: data.id, service, date, hour });
     setHour(null);
+    setAgreed(false);
     setReload((r) => r + 1);
     loadMyBookings();
   }
@@ -171,6 +180,10 @@ export default function BookPage() {
   const strip = Array.from({ length: STRIP_DAYS }, (_, i) => addDays(today, i));
   const states = SLOT_HOURS.map((h) => slotState(h));
   const noneLeft = service && states.every((s) => s !== "ok");
+  // latest start time that still lets this style finish before closing
+  const lastStart = service
+    ? [...SLOT_HOURS].reverse().find((h) => h * 60 + service.duration_minutes <= CLOSE_HOUR * 60)
+    : null;
 
   return (
     <>
@@ -200,6 +213,11 @@ export default function BookPage() {
                 <span className="text-sm text-cocoa">
                   R{service.price_rand} · {fmtDur(service.duration_minutes)}
                 </span>
+                {lastStart !== null && (
+                  <span className="block text-xs text-cocoa">
+                    Latest start: {String(lastStart).padStart(2, "0")}:00
+                  </span>
+                )}
               </div>
             </div>
           )}
@@ -252,7 +270,7 @@ export default function BookPage() {
                   {String(h).padStart(2, "0")}:00
                   {off && (
                     <span className="block text-[10px] no-underline">
-                      {st === "past" ? "Past" : st === "full" ? "Full" : "After closing"}
+                      {st === "past" ? "Past" : st === "full" ? "Full" : "Too late"}
                     </span>
                   )}
                 </button>
@@ -265,21 +283,47 @@ export default function BookPage() {
             </p>
           )}
           <p className="mt-3 text-xs text-cocoa">
-            Greyed-out times are in the past, full, or would run after closing (19:00).
+            Greyed-out times are in the past, full, or too late for this style to
+            finish before closing at {String(CLOSE_HOUR).padStart(2, "0")}:00.
           </p>
+          {service && lastStart !== null && (
+            <p className="mt-2 rounded-xl bg-sand p-3 text-sm">
+              <b>{service.name}</b> takes about {fmtDur(service.duration_minutes)}. The
+              salon closes at {String(CLOSE_HOUR).padStart(2, "0")}:00, so the latest
+              start for this style is <b>{String(lastStart).padStart(2, "0")}:00</b>.
+            </p>
+          )}
         </div>
 
         {service && (
-          <p className="mb-5 rounded-xl bg-sand p-4">
+          <div className="mb-5 rounded-xl bg-sand p-4">
             {service.deposit_rand > 0 ? (
               <>
-                Deposit to secure your slot: <b>R{service.deposit_rand}</b> (the
-                rest is paid at the salon)
+                <p>
+                  Deposit to secure your slot: <b>R{service.deposit_rand}</b> (the
+                  rest is paid at the salon)
+                </p>
+                <p className="mt-2 font-semibold text-clay">
+                  The deposit is non-refundable.
+                </p>
+                <p className="text-sm text-cocoa">
+                  If the salon has to move your booking, your deposit stays with
+                  the new time.
+                </p>
+                <label className="mt-3 flex items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={agreed}
+                    onChange={(e) => setAgreed(e.target.checked)}
+                    className="mt-1"
+                  />
+                  <span>I understand the deposit is non-refundable.</span>
+                </label>
               </>
             ) : (
-              <>No deposit needed for this service. Pay at the salon.</>
+              <p>No deposit needed for this service. Pay at the salon.</p>
             )}
-          </p>
+          </div>
         )}
 
         <button className="btn btn-gold w-full" onClick={book}>Book now</button>
@@ -303,6 +347,11 @@ export default function BookPage() {
               <p className="mt-2">
                 Your reference is <b>SALON-{confirmation.id}</b>. No deposit is
                 needed.
+              </p>
+            )}
+            {confirmation.service.deposit_rand > 0 && (
+              <p className="mt-2 font-semibold text-clay">
+                Reminder: the deposit is non-refundable.
               </p>
             )}
             <p className="mt-2 text-sm text-cocoa">

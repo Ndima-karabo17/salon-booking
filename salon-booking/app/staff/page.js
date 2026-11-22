@@ -45,7 +45,7 @@ export default function StaffPage() {
     const { data, error } = await supabase
       .from("bookings")
       .select(
-        "id, starts_at, status, deposit_status, deposit_method, deposit_reference, deposit_confirmed_at, rescheduled_from, walk_in_label, client:profiles!client_id(full_name), services(name, price_rand, deposit_rand)"
+        "id, starts_at, status, deposit_status, deposit_method, deposit_reference, deposit_confirmed_at, rescheduled_from, walk_in_label, client:profiles!client_id(full_name), services(name, price_rand, deposit_rand, duration_minutes)"
       )
       .order("starts_at", { ascending: true });
     if (error) setError(error.message);
@@ -82,6 +82,10 @@ export default function StaffPage() {
           ? "That time is already full. Please pick another time."
           : error.message.includes("owner_only")
           ? "Only the owner can change deposits."
+          : error.message.includes("slot_closed")
+          ? "That style would run past closing time (19:00). Pick an earlier start."
+          : error.message.includes("slot_past")
+          ? "That time has already passed."
           : error.message
       );
       return false;
@@ -331,11 +335,14 @@ export default function StaffPage() {
                     className="rounded border p-2"
                   >
                     <option value="">Time</option>
-                    {HOURS.map((h) => (
-                      <option key={h} value={h}>
-                        {String(h).padStart(2, "0")}:00
-                      </option>
-                    ))}
+                    {HOURS.map((h) => {
+                      const tooLate = h * 60 + (b.services?.duration_minutes || 60) > 19 * 60;
+                      return (
+                        <option key={h} value={h} disabled={tooLate}>
+                          {String(h).padStart(2, "0")}:00{tooLate ? " (too late)" : ""}
+                        </option>
+                      );
+                    })}
                   </select>
                   <Btn tone="bg-green-100" onClick={() => saveResched(b)}>Save</Btn>
                   <Btn onClick={() => setReschedId(null)}>Cancel</Btn>

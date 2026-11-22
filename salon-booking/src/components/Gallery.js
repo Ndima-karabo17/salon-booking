@@ -1,15 +1,15 @@
 import Image from "next/image";
 
 const WORK = [
-  { file: "style-1.jpg", caption: "Twists, shoulder length" },
-  { file: "style-2.jpg", caption: "Sleek bun with purple colour" },
-  { file: "style-3.jpg", caption: "Straight-back cornrows" },
-  { file: "style-4.jpg", caption: "Sleek bun with side cornrows" },
-  { file: "style-5.jpg", caption: "Curved cornrows" },
-  { file: "style-6.jpg", caption: "Cornrows with a twisted bun" },
-  { file: "style-7.jpg", caption: "Side-swept cornrows" },
-  { file: "style-8.jpg", caption: "Short curls with blue colour" },
-  { file: "style-9.jpg", caption: "Braided base with a puff" },
+  { file: "style-1.jpg" },
+  { file: "style-2.jpg"},
+  { file: "style-3.jpg" },
+  { file: "style-4.jpg"},
+  { file: "style-5.jpg" },
+  { file: "style-6.jpg"},
+  { file: "style-7.jpg"},
+  { file: "style-8.jpg"},
+  { file: "style-9.jpg"},
 ];
 
 export default function Gallery() {

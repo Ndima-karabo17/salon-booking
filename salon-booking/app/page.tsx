@@ -1,5 +1,6 @@
 import Link from "next/link";
 import ServiceMenu from "../src/components/ServiceMenu";
+import Gallery from "../src/components/Gallery";
 
 const SALON_NAME = "Sbongile's Hair Salon";
 const ADDRESS = "448 Bo-Okelo St, Seshego-A, Polokwane, 0742";
@@ -11,7 +12,7 @@ const mapLink = `https://www.google.com/maps/search/?api=1&query=${mapQuery}`;
 
 const STEPS = [
   ["Choose", "Pick your style, date and start time."],
-  ["Secure", "Pay a small deposit by cash or transfer to hold your slot."],
+  ["Secure", "Pay a small non-refundable deposit by cash or transfer to hold your slot."],
   ["Relax", "We confirm your deposit and your chair is waiting."],
 ];
 
@@ -34,6 +35,13 @@ export default function Home() {
           </div>
           <p className="mt-6 text-sm text-sand">Open every day, 07:00 to 19:00</p>
         </div>
+      </section>
+
+      <section id="work" className="mx-auto max-w-xl px-6 pt-12">
+        <h2 className="font-display text-3xl font-bold">Our work</h2>
+        <p className="mb-6 mt-1 text-cocoa">A few styles from the chair. Pick one and book it.</p>
+        <Gallery />
+        <Link href="/book" className="btn btn-gold mt-6 w-full">Book your style</Link>
       </section>
 
       <section id="services" className="mx-auto max-w-xl px-6 py-12">
