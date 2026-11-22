@@ -20,6 +20,18 @@ body {
   background: #fbf5ec;
   color: #2b1a12;
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  overflow-x: clip; /* safety net: never scroll sideways, keeps sticky navbar working */
+}
+
+/* Responsive fixes */
+/* main sits inside a column flexbox; without a width, mx-auto makes it shrink to
+   its content, so wide rows (like the date strip) stretched the whole page */
+main {
+  width: 100%;
+  min-width: 0;
+}
+img, svg, iframe, video {
+  max-width: 100%;
 }
 
 /* Buttons */
@@ -56,6 +68,20 @@ body {
   background: #ffffff;
   border-radius: 0.75rem;
   padding: 0.7rem 0.9rem;
+}
+.field {
+  min-width: 0;
+  max-width: 100%;
+  display: block;
+}
+select.field {
+  text-overflow: ellipsis;
+}
+input[type="date"].field,
+input[type="time"].field {
+  -webkit-appearance: none;
+  appearance: none;
+  min-height: 3rem;
 }
 .field:focus {
   outline: 2px solid #c8963e;
