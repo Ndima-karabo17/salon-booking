@@ -67,6 +67,7 @@ export default function Navbar() {
   const isStaff = role === "owner" || role === "stylist";
   const links = [
     { href: "/", label: "Home" },
+    { href: "/#work", label: "Our work" },
     { href: "/#services", label: "Services" },
     { href: "/book", label: "Booking slots" },
     ...(isStaff

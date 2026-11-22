@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabase } from "../../src/lib/supabase";
+import StyleThumb from "../../src/components/StyleThumb";
 
 const SLOT_HOURS = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]; // salon open 07:00-19:00
 const CLOSE_HOUR = 19;
@@ -133,10 +134,10 @@ export default function BookPage() {
       setMessage("Please choose a style and a time.");
       return;
     }
-    if (new Date(slotIso(date, hour)).getTime() <= Date.now()) {
+    if (new Date(slotIso(date, hour)).getTime() <= Date.now) {
       setMessage("That time has already passed. Please pick a later time.");
       setHour(null);
-      setNow(Date.now());
+      setNow(Date.now);
       return;
     }
     const { data, error } = await supabase
@@ -190,6 +191,18 @@ export default function BookPage() {
               </option>
             ))}
           </select>
+          {service && (
+            <div className="mt-3 flex items-center gap-3 rounded-xl bg-sand p-3">
+              <StyleThumb name={service.name} size={72} />
+              <div>
+                <b>{service.name}</b>
+                <br />
+                <span className="text-sm text-cocoa">
+                  R{service.price_rand} · {fmtDur(service.duration_minutes)}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="card mb-5">

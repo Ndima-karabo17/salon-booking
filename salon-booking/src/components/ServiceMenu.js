@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { getSupabase } from "../lib/supabase";
+import StyleThumb from "./StyleThumb";
 
 function fmtDur(min) {
   if (min < 60) return `${min} min`;
@@ -46,10 +47,11 @@ export default function ServiceMenu() {
             <p className="mb-3 text-sm text-cocoa">{g.note}</p>
             <ul className="divide-y divide-sand">
               {items.map((s) => (
-                <li key={s.id} className="flex items-baseline justify-between gap-3 py-2">
-                  <span>
+                <li key={s.id} className="flex items-center gap-3 py-3">
+                  <StyleThumb name={s.name} size={56} />
+                  <span className="min-w-0 flex-1">
                     {s.name}
-                    <span className="ml-2 text-xs text-cocoa">{fmtDur(s.duration_minutes)}</span>
+                    <span className="block text-xs text-cocoa">{fmtDur(s.duration_minutes)}</span>
                   </span>
                   <span className="font-semibold text-gold-dark">R{s.price_rand}</span>
                 </li>
