@@ -21,6 +21,18 @@ function Btn({ children, onClick, tone = "" }) {
   );
 }
 
+// opens WhatsApp with a ready-made message for the client
+function waLink(b) {
+  const name = b.client?.full_name || "there";
+  const style = b.services?.name || "booking";
+  const when = timeOf(b.starts_at);
+  const text =
+    b.status === "no_show"
+      ? `Hi ${name}, this is Sbongile's Hair Salon. We missed you for your ${style} booking at ${when}. Please reply if you would like to book another time.`
+      : `Hi ${name}, this is Sbongile's Hair Salon. We have your ${style} booking at ${when} and have not seen you yet. Are you still coming? Please reply to let us know.`;
+  return `https://wa.me/${b.client_phone}?text=${encodeURIComponent(text)}`;
+}
+
 export default function StaffPage() {
   const router = useRouter();
   const supabase = getSupabase();
@@ -45,7 +57,7 @@ export default function StaffPage() {
     const { data, error } = await supabase
       .from("bookings")
       .select(
-        "id, starts_at, status, deposit_status, deposit_method, deposit_reference, deposit_confirmed_at, rescheduled_from, walk_in_label, client:profiles!client_id(full_name), services(name, price_rand, deposit_rand, duration_minutes)"
+        "id, starts_at, status, deposit_status, deposit_method, deposit_reference, deposit_confirmed_at, rescheduled_from, walk_in_label, client_phone, client:profiles!client_id(full_name), services(name, price_rand, deposit_rand, duration_minutes)"
       )
       .order("starts_at", { ascending: true });
     if (error) setError(error.message);
@@ -281,6 +293,17 @@ export default function StaffPage() {
               <p className="text-sm text-gray-600">
                 Moved from {dateOf(b.rescheduled_from)} {timeOf(b.rescheduled_from)}
               </p>
+            )}
+
+            {b.client_phone && (b.status === "booked" || b.status === "no_show") && (
+              <a
+                href={waLink(b)}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-block rounded border border-green-600 bg-green-50 px-3 py-1 text-sm text-green-800"
+              >
+                WhatsApp client
+              </a>
             )}
 
             {(b.status === "booked" || b.status === "arrived") && (

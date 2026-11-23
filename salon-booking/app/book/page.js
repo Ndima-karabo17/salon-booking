@@ -11,6 +11,17 @@ const OFFSET = "+02:00"; // South Africa time
 const TZ = "Africa/Johannesburg";
 const STRIP_DAYS = 14;
 
+// turn what the client types into 27XXXXXXXXX (the format WhatsApp links need)
+function normalizePhone(input) {
+  let d = String(input || "").replace(/[^\d+]/g, "");
+  if (d.startsWith("+")) d = d.slice(1);
+  if (d.startsWith("0")) d = "27" + d.slice(1);
+  return /^27\d{9}$/.test(d) ? d : null;
+}
+function showPhone(n) {
+  return n && n.startsWith("27") ? "0" + n.slice(2) : n || "";
+}
+
 function slotIso(date, hour) {
   return `${date}T${String(hour).padStart(2, "0")}:00:00${OFFSET}`;
 }
@@ -49,6 +60,7 @@ export default function BookPage() {
   const [message, setMessage] = useState("");
   const [confirmation, setConfirmation] = useState(null);
   const [agreed, setAgreed] = useState(false);
+  const [phone, setPhone] = useState("");
   const [myBookings, setMyBookings] = useState([]);
 
   const service = services.find((s) => String(s.id) === String(serviceId));
@@ -56,9 +68,12 @@ export default function BookPage() {
   async function loadMyBookings() {
     const { data } = await supabase
       .from("bookings")
-      .select("id, starts_at, status, deposit_status, rescheduled_from, services(name, deposit_rand)")
+      .select("id, starts_at, status, deposit_status, rescheduled_from, client_phone, services(name, deposit_rand)")
       .order("starts_at", { ascending: true });
     setMyBookings(data || []);
+    // remember the number from the client's latest booking
+    const last = [...(data || [])].reverse().find((b) => b.client_phone);
+    if (last) setPhone((p) => p || showPhone(last.client_phone));
   }
 
   useEffect(() => {
@@ -135,6 +150,11 @@ export default function BookPage() {
       setMessage("Please choose a style and a time.");
       return;
     }
+    const waNumber = normalizePhone(phone);
+    if (!waNumber) {
+      setMessage("Please enter a valid South African WhatsApp number, for example 07X XXX XXXX.");
+      return;
+    }
     if (service.deposit_rand > 0 && !agreed) {
       setMessage("Please tick the box to confirm you understand the deposit is non-refundable.");
       return;
@@ -152,6 +172,7 @@ export default function BookPage() {
         service_id: service.id,
         starts_at: slotIso(date, hour),
         terms_accepted_at: service.deposit_rand > 0 ? new Date().toISOString() : null,
+        client_phone: waNumber,
       })
       .select()
       .single();
@@ -161,6 +182,8 @@ export default function BookPage() {
           ? "Sorry, that time was just taken. Please pick another."
           : error.message.includes("slot_past")
           ? "That time has already passed. Please pick a later time."
+          : error.message.includes("client_phone")
+          ? "Please enter a valid South African WhatsApp number."
           : error.message.includes("slot_closed")
           ? "This style would run past closing time (19:00). Please pick an earlier start."
           : error.message
@@ -293,6 +316,24 @@ export default function BookPage() {
               start for this style is <b>{String(lastStart).padStart(2, "0")}:00</b>.
             </p>
           )}
+        </div>
+
+        <div className="card mb-5">
+          <label className="mb-2 block font-semibold">4. Your WhatsApp number</label>
+          <input
+            className="field"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            placeholder="07X XXX XXXX"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+          />
+          <p className="mt-2 text-xs text-cocoa">
+            So the salon can reach you on WhatsApp if you are running late or miss
+            your slot. Only you and the salon staff can see it.{" "}
+            <b>For this prototype, use a made-up number.</b>
+          </p>
         </div>
 
         {service && (
